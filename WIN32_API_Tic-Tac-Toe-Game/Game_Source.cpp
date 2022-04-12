@@ -24,8 +24,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 		WS_OVERLAPPEDWINDOW,
 		CW_USEDEFAULT,
 		CW_USEDEFAULT,
-		700,
-		400,
+		CW_USEDEFAULT,
+		CW_USEDEFAULT,
 		NULL,
 		NULL,
 		hInstance,
@@ -42,11 +42,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 }
 
 #include <math.h>
-#define  BSIZE 40	//반지름
+#define  BSIZE 100	//지름
 
 BOOL InRectangle(int mx, int my)
 {
-	if (mx<BSIZE * 16 && my<BSIZE * 8) return TRUE;	//사각형 안을 클릭한 경우
+	if (mx<BSIZE * 5 && my<BSIZE * 5) return TRUE;	//사각형 안을 클릭한 경우
 	else return FALSE;
 }
 
@@ -55,88 +55,94 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg,
 {
 	HDC			hdc;
 	PAINTSTRUCT ps;
-	RECT rect;
-	HBRUSH hBrush;
-	static BOOL Selection;
-	static BOOL E_Selection;
+	/*RECT rect;*/
+	HPEN hPen;
 	static int ex, ey;
 	static int sx, sy;
 	static int dx, dy;
 	static int	x, y;
 	static int savei, savej;
-	static int savex[8][4] = { 0 };
-	static int savey[8][4] = { 0 };
+	static int savex[5][5] = { 0 };
+	static int savey[5][5] = { 0 };
+	static int startX, startY, endX, endY;
+	static int	cx, cy;
+	static BOOL isC;
+	static int	count;
+	static int	iColor;
 
 	switch (iMsg)
 	{
 	case WM_CREATE:
-		sx = 0; sy = 0;
+		startX = 0; startY = 0;
+		endX = 0;  endY = 0;
+		count = 0;
 
 		break;
 	case WM_PAINT:
 		hdc = BeginPaint(hwnd, &ps);
 
 		//사각틀 생성
-		for (int j = 0; j < 4; j++){
-			sx = 0;
+		for (int i = 0; i < 5; i++){
+			MoveToEx(hdc, BSIZE*(i + 1), 0, NULL);
+			LineTo(hdc, BSIZE*(i + 1), BSIZE * 5);
+		}
 
-			for (int i = 0; i < 8; i++){
-				Rectangle(hdc, sx, sy, sx + BSIZE * 2, sy + BSIZE * 2);
+		for (int i = 0; i < 5; i++){
+			MoveToEx(hdc, 0, BSIZE*(i + 1), NULL);
+			LineTo(hdc, BSIZE * 5, BSIZE*(i + 1));
+		}
+
+		//저장된 원 그리기
+		for (int i = 0; i < 5; i++){
+			for (int j = 0; j < 5; j++){
 				if (savex[i][j] != 0 && savey[i][j] != 0){
-					Ellipse(hdc, savex[i][j] - 1, savey[i][j] - 1, (savex[i][j] - 1) + BSIZE * 2, (savey[i][j] - 1) + BSIZE * 2);
+
+					Ellipse(hdc, savex[i][j] - 50, savey[i][j] - 50, savex[i][j] + 50, savey[i][j] + 50);
 				}
-
-				sx += BSIZE * 2;
 			}
-			sy += BSIZE * 2;
 		}
-		sx, sy = 0;	//초기화
 
-		//클릭하면 원 그리기
-		if (Selection){
-			//(HBRUSH)SelectObject(hdc, CreateSolidBrush(RGB(255, 0, 0)));
-			for (int b = 0; b < 4; b++){
-				sx = 0;
-				for (int a = 0; a < 8; a++){
-					if (dx > sx && dx < sx + BSIZE * 2 && dy > sy && dy < sy + BSIZE * 2){	//마우스 커서 위치가 어느 작은 사각형 위치에 있는지 찾기
-						ex = sx; ey = sy;
-						savei = a;
-						savej = b;
-						E_Selection = TRUE;
-						break;
-					}
-					sx += BSIZE * 2;
-				}
-				sy += BSIZE * 2;
+		//원그리기
+		if (isC){
+			if ((iColor % 2) == 0){
+				hPen = CreatePen(PS_SOLID, 1, RGB(255, 0, 0));
+				(HPEN)SelectObject(hdc, hPen);
 			}
-
-
+			else {
+				hPen = CreatePen(PS_SOLID, 1, RGB(0, 0, 255));
+				(HPEN)SelectObject(hdc, hPen);
+			}
+			iColor++;
+			Ellipse(hdc, cx - 50, cy - 50, cx + 50, cy + 50);
+			isC = false;
 		}
-		if (E_Selection){
-			Ellipse(hdc, ex, ey, ex + BSIZE * 2, ey + BSIZE * 2);
-			savex[savei][savej] = ex + 1;
-			savey[savei][savej] = ey + 1;
-		}
 
-		sx, sy = 0;	//초기화
 
+
+		/*DeleteObject(hPen);*/
 		EndPaint(hwnd, &ps);
 		break;
 	case WM_LBUTTONDOWN:
 		dx = LOWORD(lParam);	//마우스 좌표
 		dy = HIWORD(lParam);
 
-		if (InRectangle(dx, dy)) {	//큰 사각형 내부에 클릭 했는지 확인
-			Selection = TRUE;
+		cx = (dx / BSIZE)*BSIZE + BSIZE / 2;		//원의 중심 좌표 구하기
+		cy = (dy / BSIZE)*BSIZE + BSIZE / 2;
 
+		savex[dx / BSIZE][dy / BSIZE] = cx;
+		savey[dx / BSIZE][dy / BSIZE] = cy;
+
+		if (InRectangle(dx, dy)) {	//큰 사각형 내부에 클릭 했는지 확인
+
+			isC = TRUE;
 		}
 
 		InvalidateRgn(hwnd, NULL, TRUE);
 		break;
-	case WM_LBUTTONUP:
+		/*case WM_LBUTTONUP:
 		Selection = FALSE;
 		InvalidateRgn(hwnd, NULL, TRUE);
-		break;
+		break;*/
 	case WM_DESTROY:
 		PostQuitMessage(0);
 		break;
