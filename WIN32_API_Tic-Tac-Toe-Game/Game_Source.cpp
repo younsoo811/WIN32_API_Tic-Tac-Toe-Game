@@ -57,11 +57,11 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg,
 	PAINTSTRUCT ps;
 	/*RECT rect;*/
 	HPEN hPen;
-	static int ex, ey;
-	static int sx, sy;
+	
+	
 	static int dx, dy;
-	static int	x, y;
-	static int savei, savej;
+
+	
 	static int savex[5][5] = { 0 };
 	static int savey[5][5] = { 0 };
 	static int startX, startY, endX, endY;
